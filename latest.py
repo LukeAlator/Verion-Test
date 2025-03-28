@@ -1,5 +1,5 @@
-#VER1005 - 1.xx (2025-2030)
-
+#VER1005 - 1.41 (2025-2030)
+OTA
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -41,7 +41,7 @@ lte_pwrkey = Pin(16, Pin.OUT)
 
 SAMPLE_PUMP_DURATION = 50  # Duration (in seconds) to run the sample pump (used in run_sample_pump)
 HEATPAD_STABILIZATION_TIME = 45  # Duration (in seconds) to wait for heatpad stabilization (used in heatpad_control)
-OTA_URL = "http://your-server.com/firmware/latest.py"  # Replace with your HTTP server URL
+OTA_URL = "http://github.com/LukeAlator/Verion-Test/blob/main/latest.py"  # Replace with your HTTP server URL
 
 # -------------------------------------------
 # FUNCTIONS
