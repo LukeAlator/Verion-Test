@@ -1,5 +1,5 @@
-#VER1005 - 1.46 (2025-2030)
-#OTA HI PADDY
+#VER1005 - 1.47 (2025-2030)
+#OTA HELLO WORLD
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -313,42 +313,54 @@ def parse_response(response, command, unit, offset, slope):
 
 def check_sms():
     """Checks for SMS and triggers actions based on the content."""
+    log("Checking for unread SMS messages...", level="INFO")
     response = send_at_command('AT+CMGL="REC UNREAD"')
+    log(f"Raw SMS response: {response}", level="DEBUG")
+    
     if response and "+CMGL" in response:
+        log("Unread SMS detected. Processing...", level="INFO")
         for line in response.split("\n"):
+            log(f"Processing SMS line: {line}", level="DEBUG")
+            
             # Check for sample interval update
             if "SAMPLE_INTERVAL=" in line:
                 try:
                     new_interval = int(line.split("=")[1])
                     config.SAMPLE_INTERVAL = new_interval
-                    print(f"Updated sample interval to {new_interval} seconds")
+                    log(f"Updated sample interval to {new_interval} seconds", level="INFO")
                 except ValueError:
-                    print("⚠️ Error parsing sample interval from SMS.")
+                    log("⚠️ Error parsing sample interval from SMS.", level="ERROR")
             
             # Check for OTA update trigger
             elif "update" in line.lower():
-                print("Update SMS received. Initiating OTA update...")
+                log("Update SMS received. Initiating OTA update...", level="INFO")
                 perform_ota_update()
+    else:
+        log("No unread SMS messages found.", level="INFO")
                     
 def perform_ota_update():
     """Performs an OTA update by downloading and replacing the current script."""
     try:
-        print("Downloading new firmware...")
+        log("Starting OTA update process...", level="INFO")
+        log(f"Downloading firmware from {OTA_URL}...", level="INFO")
+        
         response = urequests.get(OTA_URL)
+        log(f"HTTP status code: {response.status_code}", level="DEBUG")
+        
         if response.status_code == 200:
             new_code = response.text
-            print("New firmware downloaded successfully. Writing to file...")
+            log("Firmware downloaded successfully. Writing to file...", level="INFO")
             
             # Write the new code to the current script file
             with open("main.py", "w") as script_file:  # Replace "main.py" with your script's filename
                 script_file.write(new_code)
             
-            print("Firmware updated successfully. Rebooting...")
+            log("Firmware updated successfully. Rebooting...", level="INFO")
             reboot_system()
         else:
-            print(f"Failed to download firmware. HTTP status code: {response.status_code}")
+            log(f"Failed to download firmware. HTTP status code: {response.status_code}", level="ERROR")
     except Exception as e:
-        print(f"Error during OTA update: {e}")
+        log(f"Error during OTA update: {e}", level="ERROR")
                     
 def enable_sleep_mode():
     """Enables sleep mode using AT+CSCLK command."""
