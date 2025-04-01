@@ -1,4 +1,4 @@
-#VER1005 - 1.48 (2025-2030)
+#VER1005 - 1.49 (2025-2030)
 # hi
 # -------------------------------------------
 # IMPORTS
@@ -321,15 +321,15 @@ def check_sms():
     
     if response and "+CMGL" in response:
         log("Unread SMS detected. Processing...", level="INFO")
-        for line in response.split("\n"):
+        lines = response.split("\n")
+        for i, line in enumerate(lines):
             log(f"Processing SMS line: {line}", level="DEBUG")
             
-            # Check if the line contains the actual SMS content
+            # Check if the line contains the SMS metadata
             if "+CMGL" in line:
-                # Extract the SMS content (assuming it's the last part of the line)
-                parts = line.split(",")
-                if len(parts) > 3:
-                    sms_content = parts[-1].strip().strip('"')
+                # Extract the SMS content from the next line
+                if i + 1 < len(lines):
+                    sms_content = lines[i + 1].strip()
                     log(f"Extracted SMS content: {sms_content}", level="DEBUG")
                     
                     # Check for sample interval update
