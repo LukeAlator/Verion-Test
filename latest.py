@@ -1,5 +1,5 @@
-#VER1005 - 1.49 (2025-2030)
-# hi
+#VER1005 - 1.50 (2025-2030)
+# HIHIHIHIHI
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -327,24 +327,28 @@ def check_sms():
             
             # Check if the line contains the SMS metadata
             if "+CMGL" in line:
-                # Extract the SMS content from the next line
-                if i + 1 < len(lines):
-                    sms_content = lines[i + 1].strip()
-                    log(f"Extracted SMS content: {sms_content}", level="DEBUG")
-                    
-                    # Check for sample interval update
-                    if "SAMPLE_INTERVAL=" in sms_content:
-                        try:
-                            new_interval = int(sms_content.split("=")[1])
-                            config.SAMPLE_INTERVAL = new_interval
-                            log(f"Updated sample interval to {new_interval} seconds", level="INFO")
-                        except ValueError:
-                            log("⚠️ Error parsing sample interval from SMS.", level="ERROR")
-                    
-                    # Check for OTA update trigger
-                    elif "update" in sms_content.lower():
-                        log("Update SMS received. Initiating OTA update...", level="INFO")
-                        perform_ota_update()
+                # Extract the SMS content from the next non-empty line
+                for j in range(i + 1, len(lines)):
+                    sms_content = lines[j].strip()
+                    if sms_content:  # Skip empty lines
+                        log(f"Extracted SMS content: {sms_content}", level="DEBUG")
+                        
+                        # Check for sample interval update
+                        if "SAMPLE_INTERVAL=" in sms_content:
+                            try:
+                                new_interval = int(sms_content.split("=")[1])
+                                config.SAMPLE_INTERVAL = new_interval
+                                log(f"Updated sample interval to {new_interval} seconds", level="INFO")
+                            except ValueError:
+                                log("⚠️ Error parsing sample interval from SMS.", level="ERROR")
+                        
+                        # Check for OTA update trigger
+                        elif "update" in sms_content.lower():
+                            log("Update SMS received. Initiating OTA update...", level="INFO")
+                            perform_ota_update()
+                        
+                        # Stop processing after finding the SMS content
+                        break
     else:
         log("No unread SMS messages found.", level="INFO")
                     
@@ -697,7 +701,8 @@ def collect_sensor_data():
     sensor_data = {
         "Device_Type": config.DEVICE_TYPE,
         "K96": read_k96(),
-        "Signal_Strength": get_signal_strength()
+        "Signal_Strength": get_signal_strength(),
+        "Firmware": config.FIRMWARE_VERSION
     }
     return sensor_data
 
