@@ -1,5 +1,5 @@
 #VER1005 - 1.48 (2025-2030)
-# HI PADDY
+# hi
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -106,13 +106,15 @@ def send_at_command(command, delay=1):
     response = uart_lte.read()
     if response:
         try:
+            # Decode the response and replace invalid characters manually
             decoded_response = response.decode("utf-8").strip()
             log(f"Response: {decoded_response}")
             return decoded_response
         except UnicodeError as e:
-            log(f"UnicodeError while decoding response: {e}", level="ERROR")
-            # Return a placeholder string if decoding fails
-            return "<DECODING_ERROR>"
+            # Replace invalid characters manually if decoding fails
+            decoded_response = "".join(chr(c) if c < 128 else "?" for c in response)
+            log(f"UnicodeError while decoding response: {e}. Recovered response: {decoded_response}", level="ERROR")
+            return decoded_response
     return ""
 
 def control_lte_power(state, reset=False):
