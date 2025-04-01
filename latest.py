@@ -1,5 +1,5 @@
 #VER1005 - 1.46 (2025-2030)
-#OTA HI LUKE
+#OTA HI PADDY
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -435,7 +435,15 @@ def send_data_with_retry(client, sensor_data, wakeup_timestamp):
                 
                 if send_data_to_mqtt(client, sensor_data, wakeup_timestamp):
                     client.disconnect()
-                    check_sms()  # Check for SMS after sending data
+                    
+                    # Check for SMS after sending data
+                    response = send_at_command('AT+CMGL="REC UNREAD"')
+                    if response and "+CMGL" in response:
+                        log("SMS received. Processing...", level="INFO")
+                        check_sms()
+                    else:
+                        log("No SMS received.", level="INFO")
+                    
                     enable_sleep_mode()  # Enable sleep mode after disconnecting
                     return True
                 else:
@@ -483,7 +491,15 @@ def send_data_with_retry(client, sensor_data, wakeup_timestamp):
         
         if send_data_to_mqtt(client, sensor_data, wakeup_timestamp):
             client.disconnect()
-            check_sms()  # Check for SMS after sending data
+            
+            # Check for SMS after sending data
+            response = send_at_command('AT+CMGL="REC UNREAD"')
+            if response and "+CMGL" in response:
+                log("SMS received. Processing...", level="INFO")
+                check_sms()
+            else:
+                log("No SMS received.", level="INFO")
+            
             enable_sleep_mode()  # Enable sleep mode after disconnecting
             return True
         else:
