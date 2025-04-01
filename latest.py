@@ -1,9 +1,10 @@
-#VER1005 - 1.45 (2025-2030)
-#OTA - HI
+#VER1005 - 1.46 (2025-2030)
+#OTA HI LUKE
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
 
+import urequests
 import machine
 import random
 import utime
@@ -41,6 +42,8 @@ lte_pwrkey = Pin(16, Pin.OUT)
 
 SAMPLE_PUMP_DURATION = 50  # Duration (in seconds) to run the sample pump (used in run_sample_pump)
 HEATPAD_STABILIZATION_TIME = 45  # Duration (in seconds) to wait for heatpad stabilization (used in heatpad_control)
+
+OTA_URL = "https://raw.githubusercontent.com/LukeAlator/Verion-Test/main/latest.py"
 
 # -------------------------------------------
 # FUNCTIONS
@@ -309,10 +312,11 @@ def parse_response(response, command, unit, offset, slope):
     return None
 
 def check_sms():
-    """Checks for SMS and updates sample interval if received."""
-    response = send_at_command("AT+CMGL=\"REC UNREAD\"")
+    """Checks for SMS and triggers actions based on the content."""
+    response = send_at_command('AT+CMGL="REC UNREAD"')
     if response and "+CMGL" in response:
         for line in response.split("\n"):
+            # Check for sample interval update
             if "SAMPLE_INTERVAL=" in line:
                 try:
                     new_interval = int(line.split("=")[1])
@@ -320,6 +324,31 @@ def check_sms():
                     print(f"Updated sample interval to {new_interval} seconds")
                 except ValueError:
                     print("⚠️ Error parsing sample interval from SMS.")
+            
+            # Check for OTA update trigger
+            elif "update" in line.lower():
+                print("Update SMS received. Initiating OTA update...")
+                perform_ota_update()
+                    
+def perform_ota_update():
+    """Performs an OTA update by downloading and replacing the current script."""
+    try:
+        print("Downloading new firmware...")
+        response = urequests.get(OTA_URL)
+        if response.status_code == 200:
+            new_code = response.text
+            print("New firmware downloaded successfully. Writing to file...")
+            
+            # Write the new code to the current script file
+            with open("main.py", "w") as script_file:  # Replace "main.py" with your script's filename
+                script_file.write(new_code)
+            
+            print("Firmware updated successfully. Rebooting...")
+            reboot_system()
+        else:
+            print(f"Failed to download firmware. HTTP status code: {response.status_code}")
+    except Exception as e:
+        print(f"Error during OTA update: {e}")
                     
 def enable_sleep_mode():
     """Enables sleep mode using AT+CSCLK command."""
@@ -603,9 +632,9 @@ def get_network_time(retries=3):
     return False
 
 def reboot_system():
-    """Reboots the system and waits for 30 minutes before restarting the script."""
-    log("Rebooting system in 30 minutes...", level="INFO")
-    time.sleep(1800)  # Wait for 30 minutes
+    """Reboots the system to apply the new firmware."""
+    log("Rebooting system to apply new firmware...", level="INFO")
+    time.sleep(5)  # Wait for a few seconds before rebooting
     machine.reset()  # Reboot the system
 
 def send_data_to_mqtt(client, data, timestamp):
