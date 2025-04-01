@@ -1,5 +1,5 @@
-#VER1005 - 1.41 (2025-2030)
-#OTA
+#VER1005 - 1.45 (2025-2030)
+#OTA - HI
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -41,7 +41,6 @@ lte_pwrkey = Pin(16, Pin.OUT)
 
 SAMPLE_PUMP_DURATION = 50  # Duration (in seconds) to run the sample pump (used in run_sample_pump)
 HEATPAD_STABILIZATION_TIME = 45  # Duration (in seconds) to wait for heatpad stabilization (used in heatpad_control)
-OTA_URL = "http://github.com/LukeAlator/Verion-Test/blob/main/latest.py"  # Replace with your HTTP server URL
 
 # -------------------------------------------
 # FUNCTIONS
@@ -70,20 +69,29 @@ def truncate_log_file():
         current_time = utime.time()
         reset_needed = False
 
-        # Check if the last reset time is recorded
-        if uos.stat(LAST_RESET_FILE):
+        # Check if the last reset time file exists
+        try:
             with open(LAST_RESET_FILE, "r") as f:
                 last_reset_time = float(f.read().strip())
+                # Check if a day has passed since the last reset
                 reset_needed = current_time - last_reset_time >= 86400  # 86400 seconds in a day
-        else:
+        except OSError:
+            # If the file does not exist, assume a reset is needed
             reset_needed = True
 
         if reset_needed:
-            if uos.stat(LOG_FILE):
+            # Delete the log file if it exists
+            try:
+                uos.stat(LOG_FILE)  # Check if the log file exists
                 uos.remove(LOG_FILE)
                 print("Log file deleted to start a new one for the day.")
+            except OSError:
+                print("Log file does not exist or could not be deleted.")
+
+            # Update the last reset time
             with open(LAST_RESET_FILE, "w") as f:
                 f.write(str(current_time))
+                print(f"Last reset time updated: {current_time}")
     except Exception as e:
         print(f"Failed to reset log file: {e}")
 
@@ -207,41 +215,14 @@ def check_lte_connection():
         print("❌ LTE connection not established.")
         return False
 
-def check_sms():
-    """Checks for SMS and triggers actions based on the content."""
-    response = send_at_command('AT+CMGL="REC UNREAD"')
-    if response and "+CMGL" in response:
-        for line in response.split("\n"):
-            if "SAMPLE_INTERVAL=" in line:
-                try:
-                    new_interval = int(line.split("=")[1])
-                    config.SAMPLE_INTERVAL = new_interval
-                    print(f"Updated sample interval to {new_interval} seconds")
-                except ValueError:
-                    print("⚠️ Error parsing sample interval from SMS.")
-            elif "UPDATE" in line.lower():
-                print("Update SMS received. Initiating OTA update...")
-                perform_ota_update()
-                
-def perform_ota_update():
-    """Performs an OTA update by downloading and replacing the current script."""
-    try:
-        print("Downloading new firmware...")
-        response = urequests.get(OTA_URL)
-        if response.status_code == 200:
-            new_code = response.text
-            print("New firmware downloaded successfully. Writing to file...")
-            
-            # Write the new code to the current script file
-            with open(__file__, "w") as script_file:
-                script_file.write(new_code)
-            
-            print("Firmware updated successfully. Rebooting...")
-            reboot_system()
-        else:
-            print(f"Failed to download firmware. HTTP status code: {response.status_code}")
-    except Exception as e:
-        print(f"Error during OTA update: {e}")
+def set_sms_text_mode():
+    """Sets the SMS mode to Text mode."""
+    print("Setting SMS mode to Text mode...")
+    response = send_at_command("AT+CMGF=1", 5)
+    if "OK" in response:
+        print("SMS mode set to Text mode successfully.")
+    else:
+        print("Failed to set SMS mode to Text mode. Response:", response)
 
 def run_sample_pump(duty_cycle=32768):
     """Turns ON the sample pump for a specified duration at the given duty cycle, then turns it OFF."""
@@ -622,9 +603,9 @@ def get_network_time(retries=3):
     return False
 
 def reboot_system():
-    """Reboots the system to apply the new firmware."""
-    log("Rebooting system to apply new firmware...", level="INFO")
-    time.sleep(5)  # Wait for a few seconds before rebooting
+    """Reboots the system and waits for 30 minutes before restarting the script."""
+    log("Rebooting system in 30 minutes...", level="INFO")
+    time.sleep(1800)  # Wait for 30 minutes
     machine.reset()  # Reboot the system
 
 def send_data_to_mqtt(client, data, timestamp):
@@ -745,6 +726,8 @@ try:
             continue
         
 except KeyboardInterrupt:
-    enable_k96_heatpad_power(False)
-    control_lte_power(state=False)
+    log("KeyboardInterrupt detected. Shutting down gracefully...", level="INFO")
+    enable_k96_heatpad_power(False)  # Turn off the K96 sensor and heatpad
+    control_lte_power(state=False)  # Power off the LTE modem
     log("Script terminated by user.", level="INFO")
+
