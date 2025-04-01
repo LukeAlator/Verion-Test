@@ -1,5 +1,5 @@
-#VER1005 - 1.47 (2025-2030)
-#OTA HELLO WORLD
+#VER1005 - 1.48 (2025-2030)
+# HI PADDY
 # -------------------------------------------
 # IMPORTS
 # -------------------------------------------
@@ -322,19 +322,27 @@ def check_sms():
         for line in response.split("\n"):
             log(f"Processing SMS line: {line}", level="DEBUG")
             
-            # Check for sample interval update
-            if "SAMPLE_INTERVAL=" in line:
-                try:
-                    new_interval = int(line.split("=")[1])
-                    config.SAMPLE_INTERVAL = new_interval
-                    log(f"Updated sample interval to {new_interval} seconds", level="INFO")
-                except ValueError:
-                    log("⚠️ Error parsing sample interval from SMS.", level="ERROR")
-            
-            # Check for OTA update trigger
-            elif "update" in line.lower():
-                log("Update SMS received. Initiating OTA update...", level="INFO")
-                perform_ota_update()
+            # Check if the line contains the actual SMS content
+            if "+CMGL" in line:
+                # Extract the SMS content (assuming it's the last part of the line)
+                parts = line.split(",")
+                if len(parts) > 3:
+                    sms_content = parts[-1].strip().strip('"')
+                    log(f"Extracted SMS content: {sms_content}", level="DEBUG")
+                    
+                    # Check for sample interval update
+                    if "SAMPLE_INTERVAL=" in sms_content:
+                        try:
+                            new_interval = int(sms_content.split("=")[1])
+                            config.SAMPLE_INTERVAL = new_interval
+                            log(f"Updated sample interval to {new_interval} seconds", level="INFO")
+                        except ValueError:
+                            log("⚠️ Error parsing sample interval from SMS.", level="ERROR")
+                    
+                    # Check for OTA update trigger
+                    elif "update" in sms_content.lower():
+                        log("Update SMS received. Initiating OTA update...", level="INFO")
+                        perform_ota_update()
     else:
         log("No unread SMS messages found.", level="INFO")
                     
